@@ -16,12 +16,10 @@ const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 export async function onRequestPost(context) {
   const { request, env } = context;
 
-  const allowedOrigin = env.ALLOWED_ORIGIN ? env.ALLOWED_ORIGIN.replace(/\/$/, "") : "";
-  const rawOrigin = request.headers.get("origin") || request.headers.get("referer") || "";
-  const origin = rawOrigin.replace(/\/$/, "");
-  if (allowedOrigin && origin && !origin.startsWith(allowedOrigin)) {
-    return json({ error: "Forbidden." }, 403);
-  }
+  // Origin checking removed — it broke multiple deploys for a protection that's
+  // trivially bypassed by any non-browser caller anyway. Real defense against abuse
+  // is: no billing attached to this API key (worst case is "rate limited", not a bill),
+  // and the input-size caps below.
 
   const apiKey = env.GROQ_API_KEY;
   if (!apiKey) {
