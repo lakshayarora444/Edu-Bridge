@@ -10,9 +10,10 @@ const MAX_IMAGE_BASE64_CHARS = 11 * 1024 * 1024; // ~8MB raw image, base64-encod
 export async function onRequestPost(context) {
   const { request, env } = context;
 
-  const allowedOrigin = env.ALLOWED_ORIGIN;
-  const origin = request.headers.get("origin") || request.headers.get("referer") || "";
-  if (allowedOrigin && !origin.startsWith(allowedOrigin)) {
+  const allowedOrigin = env.ALLOWED_ORIGIN ? env.ALLOWED_ORIGIN.replace(/\/$/, "") : "";
+  const rawOrigin = request.headers.get("origin") || request.headers.get("referer") || "";
+  const origin = rawOrigin.replace(/\/$/, "");
+  if (allowedOrigin && origin && !origin.startsWith(allowedOrigin)) {
     return json({ error: "Forbidden." }, 403);
   }
 
