@@ -22,6 +22,6 @@ credit system in 2026 that runs out fast under an iterative build/debug process)
    - Build command: `npm run build`
    - Build output directory: `dist`
 4. Before or right after first deploy: Settings → Environment variables → add:
-   - `GEMINI_API_KEY` = your key from aistudio.google.com/apikey
+   - `GROQ_API_KEY` = your key from console.groq.com (free, no card, no verification wall)
    - `ALLOWED_ORIGIN` = your live `*.pages.dev` URL (add this AFTER your first deploy gives you the URL, then redeploy)
 5. Deploy. Test the "Study guide" tab first — it's the simplest round trip to verify the function works.

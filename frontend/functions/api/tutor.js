@@ -3,9 +3,15 @@
 // (Pages project > Settings > Environment variables), never in this file or the repo.
 //
 // Route: this file's path (functions/api/tutor.js) maps automatically to POST /api/tutor
+//
+// Backend: Groq (OpenAI-compatible), model meta-llama/llama-4-scout-17b-16e-instruct.
+// Switched from Gemini because this Google Cloud project was capped at 5 RPM / 20 RPD
+// even after identity verification. Groq's free tier is 30 RPM / 1,000 RPD, no card,
+// no verification wall.
 
 const MAX_PROMPT_CHARS = 4000;
 const MAX_IMAGE_BASE64_CHARS = 11 * 1024 * 1024; // ~8MB raw image, base64-encoded
+const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -17,9 +23,9 @@ export async function onRequestPost(context) {
     return json({ error: "Forbidden." }, 403);
   }
 
-  const apiKey = env.GEMINI_API_KEY;
+  const apiKey = env.GROQ_API_KEY;
   if (!apiKey) {
-    return json({ error: "Server is missing GEMINI_API_KEY. Set it in Cloudflare Pages > Settings > Environment variables." }, 500);
+    return json({ error: "Server is missing GROQ_API_KEY. Set it in Cloudflare Pages > Settings > Environment variables." }, 500);
   }
 
   let body;
@@ -40,30 +46,35 @@ export async function onRequestPost(context) {
     return json({ error: "That image is too large." }, 413);
   }
 
-  const parts = [{ text: prompt }];
+  const content = [{ type: "text", text: prompt }];
   if (image?.data && image?.mimeType) {
-    parts.push({ inline_data: { mime_type: image.mimeType, data: image.data } });
+    content.push({ type: "image_url", image_url: { url: `data:${image.mimeType};base64,${image.data}` } });
   }
 
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: [{ role: "user", parts }] }),
-      }
-    );
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [{ role: "user", content }],
+        max_tokens: 1024,
+      }),
+    });
 
     if (!res.ok) {
       if (res.status === 429) {
         return json({ error: "Too many requests right now — the free tier is rate-limited. Wait a minute and try again." }, 429);
       }
+      const errBody = await res.text().catch(() => "");
       return json({ error: `Tutor service error: ${res.status}` }, 502);
     }
 
     const data = await res.json();
-    const text = data?.candidates?.[0]?.content?.parts?.map((p) => p.text || "").join("") || "";
+    const text = data?.choices?.[0]?.message?.content || "";
 
     if (!text) {
       return json({ error: "No response from the tutor. Try again." }, 502);
