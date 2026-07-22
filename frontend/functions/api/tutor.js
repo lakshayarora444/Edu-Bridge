@@ -13,7 +13,6 @@ const MAX_PROMPT_CHARS = 4000;
 const MAX_IMAGE_BASE64_CHARS = 11 * 1024 * 1024; // ~8MB raw image, base64-encoded
 const MODEL_TEXT = "openai/gpt-oss-120b";
 const MODEL_VISION = "qwen/qwen3.6-27b";
-...
 const hasImage = image?.data && image?.mimeType;
 const MODEL = hasImage ? MODEL_VISION : MODEL_TEXT;
 
