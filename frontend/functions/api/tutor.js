@@ -11,7 +11,11 @@
 
 const MAX_PROMPT_CHARS = 4000;
 const MAX_IMAGE_BASE64_CHARS = 11 * 1024 * 1024; // ~8MB raw image, base64-encoded
-const MODEL = "openai/gpt-oss-120b";
+const MODEL_TEXT = "openai/gpt-oss-120b";
+const MODEL_VISION = "qwen/qwen3.6-27b";
+...
+const hasImage = image?.data && image?.mimeType;
+const MODEL = hasImage ? MODEL_VISION : MODEL_TEXT;
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -68,7 +72,8 @@ export async function onRequestPost(context) {
         return json({ error: "Too many requests right now — the free tier is rate-limited. Wait a minute and try again." }, 429);
       }
       const errBody = await res.text().catch(() => "");
-      return json({ error: `Tutor service error: ${res.status}` }, 502);
+    console.log("Groq error:", res.status, errBody);
+    return json({ error: `Tutor service error: ${res.status} — ${errBody}` }, 502);
     }
 
     const data = await res.json();
