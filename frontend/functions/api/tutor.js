@@ -4,38 +4,27 @@
 //
 // Route: this file's path (functions/api/tutor.js) maps automatically to POST /api/tutor
 //
-// Backend: Groq (OpenAI-compatible), model meta-llama/llama-4-scout-17b-16e-instruct.
-// Switched from Gemini because this Google Cloud project was capped at 5 RPM / 20 RPD
-// even after identity verification. Groq's free tier is 30 RPM / 1,000 RPD, no card,
-// no verification wall.
-
+// Backend: Groq (OpenAI-compatible). Text uses openai/gpt-oss-120b.
+// Images use qwen/qwen3.6-27b (Groq's current vision-capable model — Groq's
+// multimodal lineup changes often, so recheck console.groq.com/docs/vision
+// if this breaks again later).
 const MAX_PROMPT_CHARS = 4000;
 const MAX_IMAGE_BASE64_CHARS = 11 * 1024 * 1024; // ~8MB raw image, base64-encoded
 const MODEL_TEXT = "openai/gpt-oss-120b";
 const MODEL_VISION = "qwen/qwen3.6-27b";
-const hasImage = image?.data && image?.mimeType;
-const MODEL = hasImage ? MODEL_VISION : MODEL_TEXT;
 
 export async function onRequestPost(context) {
   const { request, env } = context;
-
-  // Origin checking removed — it broke multiple deploys for a protection that's
-  // trivially bypassed by any non-browser caller anyway. Real defense against abuse
-  // is: no billing attached to this API key (worst case is "rate limited", not a bill),
-  // and the input-size caps below.
-
   const apiKey = env.GROQ_API_KEY;
   if (!apiKey) {
     return json({ error: "Server is missing GROQ_API_KEY. Set it in Cloudflare Pages > Settings > Environment variables." }, 500);
   }
-
   let body;
   try {
     body = await request.json();
   } catch {
     return json({ error: "Bad request body." }, 400);
   }
-
   const { prompt, image } = body;
   if (!prompt || typeof prompt !== "string") {
     return json({ error: "Missing prompt." }, 400);
@@ -47,11 +36,13 @@ export async function onRequestPost(context) {
     return json({ error: "That image is too large." }, 413);
   }
 
+  const hasImage = Boolean(image?.data && image?.mimeType);
+  const MODEL = hasImage ? MODEL_VISION : MODEL_TEXT;
+
   const content = [{ type: "text", text: prompt }];
-  if (image?.data && image?.mimeType) {
+  if (hasImage) {
     content.push({ type: "image_url", image_url: { url: `data:${image.mimeType};base64,${image.data}` } });
   }
-
   try {
     const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -65,23 +56,19 @@ export async function onRequestPost(context) {
         max_tokens: 1024,
       }),
     });
-
     if (!res.ok) {
+      const errBody = await res.text().catch(() => "");
       if (res.status === 429) {
         return json({ error: "Too many requests right now — the free tier is rate-limited. Wait a minute and try again." }, 429);
       }
-      const errBody = await res.text().catch(() => "");
-    console.log("Groq error:", res.status, errBody);
-    return json({ error: `Tutor service error: ${res.status} — ${errBody}` }, 502);
+      console.log("Groq error:", res.status, errBody);
+      return json({ error: `Tutor service error: ${res.status} — ${errBody}` }, 502);
     }
-
     const data = await res.json();
     const text = data?.choices?.[0]?.message?.content || "";
-
     if (!text) {
       return json({ error: "No response from the tutor. Try again." }, 502);
     }
-
     return json({ text }, 200);
   } catch (e) {
     return json({ error: "Could not reach the tutor service. Try again in a moment." }, 500);
