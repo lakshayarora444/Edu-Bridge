@@ -11,7 +11,7 @@
 
 const MAX_PROMPT_CHARS = 4000;
 const MAX_IMAGE_BASE64_CHARS = 11 * 1024 * 1024; // ~8MB raw image, base64-encoded
-const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
+const MODEL = "openai/gpt-oss-120b";
 
 export async function onRequestPost(context) {
   const { request, env } = context;
