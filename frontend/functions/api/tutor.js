@@ -5,9 +5,8 @@
 // Route: this file's path (functions/api/tutor.js) maps automatically to POST /api/tutor
 //
 // Backend: Groq (OpenAI-compatible). Text uses openai/gpt-oss-120b.
-// Images use qwen/qwen3.6-27b (Groq's current vision-capable model — Groq's
-// multimodal lineup changes often, so recheck console.groq.com/docs/vision
-// if this breaks again later).
+// Images use qwen/qwen3.6-27b (Groq's current vision-capable model — check
+// console.groq.com/docs/vision if this breaks again later, Groq rotates these).
 const MAX_PROMPT_CHARS = 4000;
 const MAX_IMAGE_BASE64_CHARS = 11 * 1024 * 1024; // ~8MB raw image, base64-encoded
 const MODEL_TEXT = "openai/gpt-oss-120b";
