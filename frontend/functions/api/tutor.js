@@ -36,8 +36,7 @@ export async function onRequestPost(context) {
     return json({ error: "That image is too large." }, 413);
   }
 
-  const { prompt, image } = body;
-  const hasImage = image?.data && image?.mimeType;
+  const hasImage = Boolean(image?.data && image?.mimeType);
   const MODEL = hasImage ? MODEL_VISION : MODEL_TEXT;
 
   const content = [{ type: "text", text: prompt }];
